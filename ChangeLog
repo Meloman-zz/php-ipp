@@ -1,10 +1,15 @@
+2021-07-13:
+   - fixed deprecated clean() function in http_class.php
+
 2010-09-07:
    - applying a patche from Brian Kroth (untested) :
       fix getjobs attributes for CUPS 1.4.4
+ 
 2010-08-22:
    - applying two patches from Brian Kroth (untested) :
         * deprecated split function replaced by preg_split
         * modification of _interpretAttribute function
+ 
 2008-06-21:
    - changed phpprintipp CLI's rcfile
      syntax to variable = "value"
