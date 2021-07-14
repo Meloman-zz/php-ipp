@@ -1306,7 +1306,7 @@ class PrintIPP extends BasicIPP
 		$attribute_name = str_replace('-', '_', $attribute_name);
 
 		self::_putDebug(sprintf("Value: %s\n", $value));
-		$object->$attribute_name->_type = $type;
+		@$object->$attribute_name->_type = $type;
 		$object->$attribute_name->$value_key = $attribute_value;
 		$object->$attribute_name->$col_name_key = $collection_name;
 		$object->$attribute_name->$col_val_key = $collection_value;
