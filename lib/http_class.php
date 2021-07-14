@@ -303,8 +303,10 @@ class http_class {
 	private function _HttpError($msg, $level, $errno = null) {
 		$trace = '';
 		$backtrace = debug_backtrace;
-		foreach ($backtrace as $trace) {
-			$trace .= sprintf("in [file: '%s'][function: '%s'][line: %s];\n", $trace['file'], $trace['function'], $trace['line']);
+		if(is_array($backtrace)) {
+			foreach ($backtrace as $trace) {
+				$trace .= sprintf("in [file: '%s'][function: '%s'][line: %s];\n", $trace['file'], $trace['function'], $trace['line']);
+			}
 		}
 		$msg = sprintf('%s\n%s: [errno: %s]: %s',
 			$trace, error2string($level), $errno, $msg);
