@@ -64,30 +64,26 @@
  * httpException class
  *
  ************************/
-class httpException extends Exception
-{
+class httpException extends Exception {
 	protected $errno;
 
-	public function __construct($msg, $errno = null)
-	{
+	public function __construct($msg, $errno = null) {
 		parent::__construct($msg);
 		$this->errno = $errno;
 	}
 
-	public function getErrorFormatted()
-	{
+	public function getErrorFormatted() {
 		return sprintf("[http_class]: %s -- " . _(" file %s, line %s"),
 			$this->getMessage(), $this->getFile(), $this->getLine());
 	}
 
-	public function getErrno()
-	{
+	public function getErrno() {
 		return $this->errno;
 	}
 }
 
-function error2string($value)
-{
+function error2string($value) {
+	
 	$level_names = array(
 		E_ERROR => 'E_ERROR',
 		E_WARNING => 'E_WARNING',
@@ -105,15 +101,12 @@ function error2string($value)
 		$level_names[E_STRICT] = 'E_STRICT';
 	}
 	$levels = array();
-	if (($value & E_ALL) == E_ALL)
-	{
+	if (($value & E_ALL) == E_ALL) {
 		$levels[] = 'E_ALL';
 		$value &= ~E_ALL;
 	}
-	foreach ($level_names as $level => $name)
-	{
-		if (($value & $level) == $level)
-		{
+	foreach ($level_names as $level => $name) {
+		if (($value & $level) == $level) {
 			$levels[] = $name;
 		}
 	}
@@ -125,8 +118,8 @@ function error2string($value)
  * class http_class
  *
  ************************/
-class http_class
-{
+class http_class {
+	
 	// variables declaration
 	public $debug;
 	public $html_debug;
@@ -156,8 +149,7 @@ class http_class
 	private $user_agent = "PRINTIPP/0.81+CVS";
 	private $readed_bytes = 0;
 
-	public function __construct()
-	{
+	public function __construct() {
 		true;
 	}
 
@@ -167,8 +159,7 @@ class http_class
 	 *
 	 **********************/
 
-	public function GetRequestArguments($url, &$arguments)
-	{
+	public function GetRequestArguments($url, &$arguments) {
 		$this->arguments = array();
 		$this->arguments["URL"] = $arguments["URL"] = $url;
 		$this->arguments["RequestMethod"] = $arguments["RequestMethod"] = "POST";
@@ -179,8 +170,7 @@ class http_class
 		//$this->headers["Expect"] = "100-continue";
 	}
 
-	public function Open($arguments)
-	{
+	public function Open($arguments) {
 		$this->connected = false;
 		$url = $arguments["URL"];
 		$port = $this->default_port;
@@ -188,8 +178,7 @@ class http_class
 		$url = preg_split('#:#', $url, 2);
 		$transport_type = $url[0];
 		$unix = false;
-		switch ($transport_type)
-		{
+		switch ($transport_type) {
 			case 'http':
 				$transport_type = 'tcp://';
 				break;
@@ -208,9 +197,9 @@ class http_class
 				$transport_type = 'tcp://';
 				break;
 		}
+		
 		$url = $url[1];
-		if (!$unix)
-		{
+		if (!$unix) {
 			#$url = split ("/", preg_replace ("#^/{1,}#", '', $url), 2);
 			$url = preg_split("#/#", preg_replace("#^/{1,}#", '', $url), 2);
 			$url = $url[0];
@@ -231,86 +220,75 @@ class http_class
 			}
 		}
 		$this->connection = @fsockopen($transport_type . $url, $port, $errno, $errstr, $this->timeout);
-		$error =
-			sprintf(_('Unable to connect to "%s%s port %s": %s'), $transport_type,
-				$url, $port, $errstr);
-		if (!$this->connection)
-		{
+		$error = sprintf(_('Unable to connect to "%s%s port %s": %s'), $transport_type, $url, $port, $errstr);
+		if (!$this->connection) {
 			return $this->_HttpError($error, E_USER_WARNING);
 		}
 		$this->connected = true;
 		return array(true, "success");
 	}
 
-	public function SendRequest($arguments)
-	{
-		$error =
-			sprintf(_('Streaming request failed to %s'), $arguments['RequestURI']);
+	public function SendRequest($arguments) {
+		$error = sprintf(_('Streaming request failed to %s'), $arguments['RequestURI']);
 		$result = self::_StreamRequest($arguments);
-		if (!$result[0])
-		{
+		if (!$result[0]) {
 			return $this->_HttpError($error . " " . $result[1], E_USER_WARNING);
 		}
 		self::_ReadReply();
-		if (!preg_match('#http/1.1 401 unauthorized#', $this->status))
-		{
+		if (!preg_match('#http/1.1 401 unauthorized#', $this->status)) {
 			return array(true, "success");
 		}
 		$headers = array_keys($this->reply_headers);
 		$error = _("need authentication but no mechanism provided");
-		if (!in_array("www-authenticate", $headers))
-		{
+		if (!in_array("www-authenticate", $headers)) {
 			return $this->_HttpError($error, E_USER_WARNING);
 		}
 		#$authtype = split (' ', $this->reply_headers["www-authenticate"]);
 		$authtype = preg_split('# #', $this->reply_headers["www-authenticate"]);
 		$authtype = strtolower($authtype[0]);
-		switch ($authtype)
-		{
-			case 'basic':
+		switch ($authtype) {
+				
+			case 'basic': {
 				$pass = base64_encode($this->user . ":" . $this->password);
 				$arguments["Headers"]["Authorization"] = "Basic " . $pass;
 				break;
-
-			case 'digest':
+			}
+				
+			case 'digest': {
 				$arguments["Headers"]["Authorization"] = self::_BuildDigest();
 				break;
-
-			default:
-				$error =
-					sprintf(_("need '%s' authentication mechanism, but have not"),
+			}
+				
+			default: {
+				$error = sprintf(_("need '%s' authentication mechanism, but have not"),
 						$authtype[0]);
 				return $this->_HttpError($error, E_USER_WARNING);
 				break;
+			}
 		}
 		self::Close();
 		self::Open($arguments);
 
 		$error = sprintf(_('Streaming request failed to %s after a try to authenticate'), $arguments['RequestURI']);
 		$result = self::_StreamRequest($arguments);
-		if (!$result[0])
-		{
+		if (!$result[0]) {
 			return $this->_HttpError($error . ": " . $result[1], E_USER_WARNING);
 		}
 		self::_ReadReply();
 		return array(true, "success");
 	}
 
-	public function ReadReplyHeaders(&$headers)
-	{
+	public function ReadReplyHeaders(&$headers) {
 		$headers = $this->reply_headers;
 	}
 
-	public function ReadReplyBody(&$body, $chunk_size)
-	{
+	public function ReadReplyBody(&$body, $chunk_size) {
 		$body = substr($this->reply_body, $this->last_limit, $chunk_size);
 		$this->last_limit += $chunk_size;
 	}
 
-	public function Close()
-	{
-		if (!$this->connected)
-		{
+	public function Close() {
+		if (!$this->connected) {
 			return;
 		}
 		fclose($this->connection);
@@ -322,29 +300,24 @@ class http_class
 	 *
 	 *********************/
 
-	private function _HttpError($msg, $level, $errno = null)
-	{
+	private function _HttpError($msg, $level, $errno = null) {
 		$trace = '';
 		$backtrace = debug_backtrace;
-		foreach ($backtrace as $trace)
-		{
+		foreach ($backtrace as $trace) {
 			$trace .= sprintf("in [file: '%s'][function: '%s'][line: %s];\n", $trace['file'], $trace['function'], $trace['line']);
 		}
 		$msg = sprintf('%s\n%s: [errno: %s]: %s',
 			$trace, error2string($level), $errno, $msg);
-		if ($this->with_exceptions)
-		{
+		if ($this->with_exceptions) {
 			throw new httpException ($msg, $errno);
 		}
-		else
-		{
+		else {
 			trigger_error($msg, $level);
 			return array(false, $msg);
 		}
 	}
 
-	private function _streamString($string)
-	{
+	private function _streamString($string) {
 		$success = fwrite($this->connection, $string);
 		if (!$success)
 		{
@@ -353,44 +326,36 @@ class http_class
 		return true;
 	}
 
-	private function _StreamRequest($arguments)
-	{
+	private function _StreamRequest($arguments) {
 		$this->status = false;
 		$this->reply_headers = array();
 		$this->reply_body = "";
-		if (!$this->connected)
-		{
+		if (!$this->connected) {
 			return $this->_HttpError(_("not connected"), E_USER_WARNING);
 		}
 		$this->arguments = $arguments;
 		$content_length = 0;
-		foreach ($this->arguments["BodyStream"] as $argument)
-		{
+		foreach ($this->arguments["BodyStream"] as $argument) {
 			//list ($type, $value) = each($argument); // deprecated
 			$type  = key($argument);
 			$value = $argument[$type];
 			
 			reset($argument);
-			if ($type == "Data")
-			{
+			if ($type == "Data") {
 				$length = strlen($value);
 			}
-			elseif ($type == "File")
-			{
-				if (is_readable($value))
-				{
+			elseif ($type == "File") {
+				if (is_readable($value)) {
 					$length = filesize($value);
 				}
-				else
-				{
+				else {
 					$length = 0;
 					return
 						$this->_HttpError(sprintf(_("%s: file is not readable"), $value),
 							E_USER_WARNING);
 				}
 			}
-			else
-			{
+			else {
 				$length = 0;
 				return
 					$this->_HttpError(sprintf
@@ -401,77 +366,65 @@ class http_class
 		}
 		$this->request_body = sprintf(_("%s Bytes"), $content_length);
 		$this->headers["Content-Length"] = $content_length;
-		$this->arguments["Headers"] =
-			array_merge($this->headers, $this->arguments["Headers"]);
-		if ($this->arguments["RequestMethod"] != "POST")
-		{
+		$this->arguments["Headers"] = array_merge($this->headers, $this->arguments["Headers"]);
+		if ($this->arguments["RequestMethod"] != "POST") {
 			return
 				$this->_HttpError(sprintf
 				(_("%s: method not implemented"),
 					$arguments["RequestMethod"]), E_USER_WARNING);
 		}
-		$string =
-			sprintf("POST %s HTTP/1.1\r\n", $this->arguments["RequestURI"]);
+		$string = sprintf("POST %s HTTP/1.1\r\n", $this->arguments["RequestURI"]);
 		$this->request_headers[$string] = '';
-		if (!$this->_streamString($string))
-		{
+		if (!$this->_streamString($string)) {
 			return $this->_HttpError(_("Error while puts POST operation"),
 				E_USER_WARNING);
 		}
-		foreach ($this->arguments["Headers"] as $header => $value)
-		{
+		foreach ($this->arguments["Headers"] as $header => $value) {
 			$string = sprintf("%s: %s\r\n", $header, $value);
 			$this->request_headers[$header] = $value;
-			if (!$this->_streamString($string))
-			{
+			if (!$this->_streamString($string)) {
 				return $this->_HttpError(_("Error while puts HTTP headers"),
 					E_USER_WARNING);
 			}
 		}
 		$string = "\r\n";
-		if (!$this->_streamString($string))
-		{
+		if (!$this->_streamString($string)) {
 			return $this->_HttpError(_("Error while ends HTTP headers"),
 				E_USER_WARNING);
 		}
-		foreach ($this->arguments["BodyStream"] as $argument)
-		{
+		foreach ($this->arguments["BodyStream"] as $argument) {
 			//list ($type, $value) = each($argument); // deprecated
 			$type  = key($argument);
 			$value = $argument[$type];
 			reset($argument);
-			if ($type == "Data")
-			{
+			if ($type == "Data") {
 				$streamed_length = 0;
-				while ($streamed_length < strlen($value))
-				{
+				while ($streamed_length < strlen($value)) {
 					$string = substr($value, $streamed_length, $this->window_size);
-					if (!$this->_streamString($string))
-					{
-						return $this->_HttpError(_("error while sending body data"),
-							E_USER_WARNING);
+					if (!$this->_streamString($string)) {
+						return $this->_HttpError(
+							_("error while sending body data"),
+							E_USER_WARNING
+						);
 					}
 					$streamed_length += $this->window_size;
 				}
 			}
-			elseif ($type == "File")
-			{
-				if (is_readable($value))
-				{
+			elseif ($type == "File") {
+				if (is_readable($value)) {
 					$file = fopen($value, 'rb');
-					while (!feof($file))
-					{
-						if (gettype($block = @fread($file, $this->window_size)) !=
-							"string"
-						)
-						{
-							return $this->_HttpError(_("cannot read file to upload"),
-								E_USER_WARNING);
+					while (!feof($file)) {
+						if (gettype($block = @fread($file, $this->window_size)) != "string") {
+							return $this->_HttpError(
+								_("cannot read file to upload"), 
+								E_USER_WARNING
+							);
 						}
-						if (!$this->_streamString($block))
-						{
-							return $this->_HttpError(_("error while sending body data"),
-								E_USER_WARNING);
+						if (!$this->_streamString($block)) {
+							return $this->_HttpError(
+								_("error while sending body data"), 
+								E_USER_WARNING
+							);
 						}
 					}
 				}
@@ -480,41 +433,33 @@ class http_class
 		return array(true, "success");
 	}
 
-	private function _ReadReply()
-	{
-		if (!$this->connected)
-		{
+	private function _ReadReply() {
+		if (!$this->connected) {
 			return array(false, _("not connected"));
 		}
 		$this->reply_headers = array();
 		$this->reply_body = "";
 		$headers = array();
 		$body = "";
-		while (!feof($this->connection))
-		{
+		while (!feof($this->connection)) {
 			$line = fgets($this->connection, 1024);
-			if (strlen(trim($line)) == 0)
-			{
+			if (strlen(trim($line)) == 0) {
 				break;
 			} // \r\n => end of headers
-			if (preg_match('#^[[:space:]]#', $line))
-			{
+			if (preg_match('#^[[:space:]]#', $line)) {
 				$headers[-1] .= sprintf(' %s', trim($line));
 				continue;
 			}
 			$headers[] = trim($line);
 		}
 		$this->status = isset ($headers[0]) ? strtolower($headers[0]) : false;
-		foreach ($headers as $header)
-		{
+		foreach ($headers as $header) {
 			$header = preg_split("#: #", $header);
 			$header[0] = strtolower($header[0]);
-			if ($header[0] !== "www-authenticate")
-			{
+			if ($header[0] !== "www-authenticate") {
 				$header[1] = isset ($header[1]) ? strtolower($header[1]) : "";
 			}
-			if (!isset ($this->reply_headers[$header[0]]))
-			{
+			if (!isset ($this->reply_headers[$header[0]])) {
 				$this->reply_headers[$header[0]] = $header[1];
 			}
 		}
@@ -522,10 +467,8 @@ class http_class
 		return true;
 	}
 
-	private function _ReadStream()
-	{
-		if (!array_key_exists("content-length", $this->reply_headers))
-		{
+	private function _ReadStream() {
+		if (!array_key_exists("content-length", $this->reply_headers)) {
 			stream_set_blocking($this->connection, 0);
 			$this->reply_body = stream_get_contents($this->connection);
 			return true;
@@ -536,15 +479,13 @@ class http_class
 		return true;
 	}
 
-	private function _BuildDigest()
-	{
+	private function _BuildDigest() {
 		$auth = $this->reply_headers["www-authenticate"];
 		#list ($head, $auth) = split (" ", $auth, 2);
 		list ($head, $auth) = preg_split("# #", $auth, 2);
 		#$auth = split (", ", $auth);
 		$auth = preg_split("#, #", $auth);
-		foreach ($auth as $sheme)
-		{
+		foreach ($auth as $sheme) {
 			#list ($sheme, $value) = split ('=', $sheme);
 			list ($sheme, $value) = preg_split('#=#', $sheme);
 			$fields[$sheme] = trim(trim($value), '"');
@@ -558,11 +499,9 @@ class http_class
 		$username = $this->user;
 		$password = $this->password;
 		$A1 = $username . ":" . $fields["realm"] . ":" . $password;
-		if (array_key_exists("algorithm", $fields))
-		{
+		if (array_key_exists("algorithm", $fields)) {
 			$algorithm = strtolower($fields["algorithm"]);
-			switch ($algorithm)
-			{
+			switch ($algorithm) {
 				case "md5":
 					break;
 
@@ -582,17 +521,14 @@ class http_class
 			}
 		}
 		$A2 = "POST:" . $this->arguments["RequestURI"];
-		if (array_key_exists("qop", $fields))
-		{
+		if (array_key_exists("qop", $fields)) {
 			$qop = strtolower($fields["qop"]);
 			#$qop = split (" ", $qop);
 			$qop = preg_split("# #", $qop);
-			if (in_array("auth", $qop))
-			{
+			if (in_array("auth", $qop)) {
 				$qop = "auth";
 			}
-			else
-			{
+			else {
 				self::_HttpError(
 					sprintf(_("digest Authorization: algorithm '%s' not implemented"),
 						$qop),
@@ -601,8 +537,7 @@ class http_class
 			}
 		}
 		$response = md5(md5($A1) . ":" . $fields["nonce"] . ":" . md5($A2));
-		if (isset ($qop) && ($qop == "auth"))
-		{
+		if (isset ($qop) && ($qop == "auth")) {
 			$response =
 				md5(md5($A1) . ":" . $fields["nonce"] . ":" . $nc . ":" . $cnonce . ":" . $qop .
 					":" . $A2);
@@ -612,20 +547,16 @@ class http_class
 			('Digest username="%s", realm="%s", nonce="%s", uri="%s", response="%s"',
 				$username, $fields["realm"], $fields['nonce'],
 				$this->arguments["RequestURI"], $response);
-		if (isset ($algorithm))
-		{
+		if (isset ($algorithm)) {
 			$auth_scheme .= sprintf(', algorithm="%s"', $algorithm);
 		}
-		if (isset ($qop))
-		{
+		if (isset ($qop)) {
 			$auth_scheme .= sprintf(', cnonce="%s"', $cnonce);
 		}
-		if (array_key_exists("opaque", $fields))
-		{
+		if (array_key_exists("opaque", $fields)) {
 			$auth_scheme .= sprintf(', opaque="%s"', $fields['opaque']);
 		}
-		if (isset ($qop))
-		{
+		if (isset ($qop)) {
 			$auth_scheme .= sprintf(', qop="%s"', $qop);
 		}
 		$auth_scheme .= sprintf(', nc=%s', $nc);
